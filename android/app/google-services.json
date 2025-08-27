@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "36648773948",
+    "project_id": "ansvel-eb0d4",
+    "storage_bucket": "ansvel-eb0d4.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:36648773948:android:97608dbb6a64c8d8271639",
+        "android_client_info": {
+          "package_name": "com.ansvel.lifestyle"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD8hyb5RS_Al93-Cctsix9oL4I1ntQhKjY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

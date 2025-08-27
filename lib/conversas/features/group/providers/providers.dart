@@ -1,0 +1,11 @@
+export 'update_group_info_provider.dart';
+export 'delete_group_msg_provider.dart';
+export 'selected_contact_provider.dart';
+export 'get_group_by_id_provider.dart';
+export 'group_msg_query_provider.dart';
+export 'send_group_msg_provider.dart';
+export 'groups_query_provider.dart';
+export 'is_new_group_provider.dart';
+export 'delete_group_provider.dart';
+export 'fetch_last_msg_provider.dart';
+export 'group_provider.dart';

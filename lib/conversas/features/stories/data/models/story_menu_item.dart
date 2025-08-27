@@ -1,0 +1,1 @@
+enum StoryMenuItem { save, delete }
