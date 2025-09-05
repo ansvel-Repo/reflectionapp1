@@ -1,9 +1,8 @@
 import 'package:ansvel/homeandregistratiodesign/models/security_question.dart';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 // Add the new role to your enum
-enum UserRole { Customer, Merchant, Driver, SubAdmin, Admin } 
+enum UserRole { Customer, Merchant, Driver, SubAdmin, Admin }
 // ... rest of the file remains the same
 enum BusinessType {
   FoodVendor,
@@ -29,6 +28,7 @@ class AppUser {
   final String? dateOfBirth;
   final String? phoneNumber;
   final String? address;
+  final String? bvn; // Added the missing bvn field
 
   // Fields for password reset flow
   final String? pendingPassword;
@@ -54,6 +54,7 @@ class AppUser {
     this.dateOfBirth,
     this.phoneNumber,
     this.address,
+    this.bvn, // Added to constructor
   });
 
   factory AppUser.fromFirestore(DocumentSnapshot doc) {
@@ -76,7 +77,8 @@ class AppUser {
           .toList(),
       encryptedPin: data['encryptedPin'],
       pendingPassword: data['pendingPassword'],
-      passwordResetTimestamp: (data['passwordResetTimestamp'] as Timestamp?)?.toDate(),
+      passwordResetTimestamp:
+          (data['passwordResetTimestamp'] as Timestamp?)?.toDate(),
       wallets: data['wallets'] as Map<String, dynamic>? ?? {},
       // Reading new KYC fields from Firestore
       firstName: data['firstName'],
@@ -84,6 +86,7 @@ class AppUser {
       dateOfBirth: data['dateOfBirth'],
       phoneNumber: data['phoneNumber'],
       address: data['address'],
+      bvn: data['bvn'], // Reading new bvn field from Firestore
     );
   }
 
@@ -93,7 +96,8 @@ class AppUser {
       'username': username,
       'role': role.toString(),
       'businessTypes': businessTypes.map((type) => type.toString()).toList(),
-      'securityQuestions': securityQuestions.map((q) => q.toFirestore()).toList(),
+      'securityQuestions':
+          securityQuestions.map((q) => q.toFirestore()).toList(),
       'encryptedPin': encryptedPin,
       'pendingPassword': pendingPassword,
       'passwordResetTimestamp': passwordResetTimestamp,
@@ -104,7 +108,7 @@ class AppUser {
       'dateOfBirth': dateOfBirth,
       'phoneNumber': phoneNumber,
       'address': address,
+      'bvn': bvn, // Adding new bvn field for writing to Firestore
     };
   }
 }
-

@@ -2,11 +2,7 @@ import 'package:ansvel/homeandregistratiodesign/models/wallet.dart';
 import 'package:ansvel/homeandregistratiodesign/services/wallet_api_service.dart';
 
 import 'package:flutter/material.dart';
-// import 'package:ansvel/models/wallet.dart';
-// import 'package:ansvel/services/wallet_api_service.dart';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
-
 
 class TransferController extends ChangeNotifier {
   final WalletApiService _apiService = WalletApiService();
@@ -52,7 +48,11 @@ class TransferController extends ChangeNotifier {
     _verificationError = null;
     notifyListeners();
     try {
-      final result = await _apiService.verifyBankAccount(accountNumber: accountNumber, sortCode: bankCode);
+      final result = await _apiService.verifyBankAccount(
+        accountNumber: accountNumber,
+        sortCode: bankCode,
+        provider: 'providus', // Added missing 'provider' argument
+      );
       _verifiedAccountName = result['account']['accountName'];
     } catch (e) {
       _verificationError = e.toString().replaceFirst("Exception: ", "");
@@ -61,7 +61,7 @@ class TransferController extends ChangeNotifier {
       notifyListeners();
     }
   }
-  
+
   void clearVerification() {
     _verifiedAccountName = null;
     _verificationError = null;
@@ -87,6 +87,7 @@ class TransferController extends ChangeNotifier {
         amount: amount,
         narration: narration,
         encryptedPin: encryptedPin,
+        provider: 'providus', // Added missing 'provider' argument
       );
 
       // After successful transfer, trigger the 5 Naira debit without waiting for it
@@ -108,6 +109,7 @@ class TransferController extends ChangeNotifier {
         amount: 5.0,
         reference: reference,
         customerId: customerId,
+        provider: 'providus', // Added missing 'provider' argument
       );
       print("Successfully charged 5 Naira service fee.");
     } catch (e) {

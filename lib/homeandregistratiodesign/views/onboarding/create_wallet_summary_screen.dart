@@ -35,8 +35,10 @@ class _CreateWalletSummaryScreenState extends State<CreateWalletSummaryScreen> {
       });
       final apiService = WalletApiService();
       try {
-        // FIX: The method was renamed from 'createWallet' to 'createInitialWallet'
-        final result = await apiService.createInitialWallet(
+        // FIX: The method call has been updated to use the new 'createWallet' method
+        final result = await apiService.createWallet(
+          // Added the required 'provider' argument
+          provider: 'providus', 
           bvn: data.bvn!,
           dob: data.dateOfBirth!,
           firstName: data.firstName!,

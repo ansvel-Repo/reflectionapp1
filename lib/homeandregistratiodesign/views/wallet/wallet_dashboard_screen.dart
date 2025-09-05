@@ -22,18 +22,16 @@ class _WalletDashboardScreenState extends State<WalletDashboardScreen> {
   @override
   void initState() {
     super.initState();
-    // Call the API with the specific wallet's details.
     _balanceFuture = _walletApiService.getWalletBalance(
-      accountNumber: widget.wallet.accountNumber,
+      customerId: widget.wallet.customerId,
       provider: widget.wallet.provider,
     );
   }
 
   void _refreshBalance() {
     setState(() {
-      // Also update the refresh logic to use the specific wallet's details.
       _balanceFuture = _walletApiService.getWalletBalance(
-        accountNumber: widget.wallet.accountNumber,
+        customerId: widget.wallet.customerId,
         provider: widget.wallet.provider,
       );
     });
@@ -165,8 +163,6 @@ class _WalletDashboardScreenState extends State<WalletDashboardScreen> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        // FIX: The TransferToBankScreen expects the 'sourceWallet' object,
-                        // not 'sourceWalletCountry'.
                         builder: (_) =>
                             TransferToBankScreen(sourceWallet: widget.wallet),
                       ),

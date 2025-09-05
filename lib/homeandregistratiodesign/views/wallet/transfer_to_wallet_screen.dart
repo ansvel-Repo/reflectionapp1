@@ -41,8 +41,10 @@ class _TransferToWalletScreenState extends State<TransferToWalletScreen> {
   }
 
   Future<void> _processTransfer(String pin) async {
-    setState(() { _isLoading = true; });
-    
+    setState(() {
+      _isLoading = true;
+    });
+
     try {
       final cryptoService = CryptoService();
       final apiService = WalletApiService();
@@ -57,6 +59,7 @@ class _TransferToWalletScreenState extends State<TransferToWalletScreen> {
         amount: double.parse(_amountController.text),
         narration: _narrationController.text.trim(),
         encryptedPin: encryptedPin,
+        provider: 'providus', // Added missing 'provider' argument
       );
 
       if (mounted) {
@@ -72,7 +75,10 @@ class _TransferToWalletScreenState extends State<TransferToWalletScreen> {
         );
       }
     } finally {
-      if (mounted) setState(() { _isLoading = false; });
+      if (mounted)
+        setState(() {
+          _isLoading = false;
+        });
     }
   }
 
@@ -111,9 +117,9 @@ class _TransferToWalletScreenState extends State<TransferToWalletScreen> {
                 width: double.infinity,
                 child: FilledButton(
                   onPressed: _isLoading ? null : _onContinue,
-                  child: _isLoading 
-                    ? const CircularProgressIndicator(color: Colors.white, strokeWidth: 3) 
-                    : const Text("Continue"),
+                  child: _isLoading
+                      ? const CircularProgressIndicator(color: Colors.white, strokeWidth: 3)
+                      : const Text("Continue"),
                 ),
               )
             ],

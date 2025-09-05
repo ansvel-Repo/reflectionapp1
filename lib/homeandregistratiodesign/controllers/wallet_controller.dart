@@ -1,11 +1,8 @@
 import 'package:ansvel/homeandregistratiodesign/models/wallet.dart';
 import 'package:ansvel/homeandregistratiodesign/services/wallet_api_service.dart';
 import 'package:ansvel/homeandregistratiodesign/services/wallet_cache_service.dart';
-// import 'package:ansvel/models/wallet.dart';
-// import 'package:ansvel/services/wallet_api_service.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-
 
 class WalletController extends ChangeNotifier {
   final WalletApiService _apiService = WalletApiService();
@@ -69,7 +66,7 @@ class WalletController extends ChangeNotifier {
       if (wallet == null) throw Exception("Wallet not found in controller.");
 
       final balanceData = await _apiService.getWalletBalance(
-        accountNumber: wallet.accountNumber,
+        customerId: wallet.customerId, // Corrected parameter name
         provider: wallet.provider,
       );
 
@@ -118,6 +115,7 @@ class WalletController extends ChangeNotifier {
       final result = await _apiService.verifyBankAccount(
         accountNumber: accountNumber,
         sortCode: bankCode,
+        provider: 'providus', // Corrected missing 'provider' argument
       );
       _verifiedAccountName = result['account']['accountName'];
     } catch (e) {
@@ -153,8 +151,9 @@ class WalletController extends ChangeNotifier {
         amount: amount,
         narration: narration,
         encryptedPin: encryptedPin,
+        provider: fromWallet.provider, // Corrected missing 'provider' argument
       );
-      _triggerServiceChargeDebit(fromWallet.customerId);
+      _triggerServiceChargeDebit(fromWallet.customerId, fromWallet.provider);
       return result;
     } finally {
       _isProcessingTransfer = false;
@@ -162,13 +161,17 @@ class WalletController extends ChangeNotifier {
     }
   }
 
-  Future<void> _triggerServiceChargeDebit(String customerId) async {
+  Future<void> _triggerServiceChargeDebit(
+    String customerId,
+    String provider,
+  ) async {
     final reference = 'fee-${DateTime.now().millisecondsSinceEpoch}';
     try {
       await _apiService.debitWallet(
         amount: 5.0,
         reference: reference,
         customerId: customerId,
+        provider: provider, // Corrected missing 'provider' argument
       );
       print("Successfully charged 5 Naira service fee.");
     } catch (e) {

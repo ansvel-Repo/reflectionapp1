@@ -3,6 +3,7 @@
 import 'package:ansvel/homeandregistratiodesign/controllers/auth_controller.dart';
 import 'package:ansvel/homeandregistratiodesign/services/crypto_service.dart';
 import 'package:ansvel/homeandregistratiodesign/services/wallet_api_service.dart';
+import 'package:ansvel/homeandregistratiodesign/views/widgets/result_dialog.dart';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
@@ -32,6 +33,12 @@ class _AddWalletScreenState extends State<AddWalletScreen> {
     _banksFuture = _fetchBanks();
   }
 
+  @override
+  void dispose() {
+    _pinController.dispose();
+    super.dispose();
+  }
+
   Future<List<QueryDocumentSnapshot>> _fetchBanks() {
     return FirebaseFirestore.instance
         .collection('bankWallet')
@@ -43,9 +50,11 @@ class _AddWalletScreenState extends State<AddWalletScreen> {
   Future<void> _submitCreateWallet() async {
     if (_formKey.currentState!.validate()) {
       if (_selectedBankName == null) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text("Please select a bank.")));
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("Please select a bank.")),
+          );
+        }
         return;
       }
 
@@ -64,10 +73,17 @@ class _AddWalletScreenState extends State<AddWalletScreen> {
         final encryptedPin = await cryptoService.encrypt(_pinController.text);
         if (encryptedPin == null) throw Exception("Could not encrypt PIN.");
 
-        await apiService.createAdditionalWallet(
-          authController: authController,
-          bankName: _selectedBankName!,
+        final user = authController.currentUser!;
+        
+        await apiService.createWallet(
+          provider: _selectedBankName!.toLowerCase(),
+          bvn: user.bvn!,
+          dob: user.dateOfBirth!,
           country: _selectedCountry!,
+          firstName: user.firstName!,
+          lastName: user.lastName!,
+          phoneNumber: user.phoneNumber!,
+          address: user.address!,
           encryptedPin: encryptedPin,
         );
 
@@ -82,18 +98,22 @@ class _AddWalletScreenState extends State<AddWalletScreen> {
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text("Error: ${e.toString()}"),
-              backgroundColor: Colors.red,
+          showDialog(
+            context: context,
+            builder: (_) => ResultDialog(
+              isSuccess: false,
+              title: "Creation Failed",
+              message: e.toString().replaceFirst("Exception: ", ""),
+              onDone: () => Navigator.of(context).pop(),
             ),
           );
         }
       } finally {
-        if (mounted)
+        if (mounted) {
           setState(() {
             _isLoading = false;
           });
+        }
       }
     }
   }
@@ -122,13 +142,18 @@ class _AddWalletScreenState extends State<AddWalletScreen> {
               FutureBuilder<List<QueryDocumentSnapshot>>(
                 future: _banksFuture,
                 builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting)
+                  if (snapshot.connectionState == ConnectionState.waiting) {
                     return const Center(child: CircularProgressIndicator());
-                  if (!snapshot.hasData || snapshot.data!.isEmpty)
+                  }
+                  if (!snapshot.hasData || snapshot.data!.isEmpty) {
                     return const Text("No banks available for this country.");
+                  }
 
                   final banks = snapshot.data!;
                   return DropdownButtonFormField<String>(
+                    decoration: const InputDecoration(
+                      border: OutlineInputBorder(),
+                    ),
                     value: _selectedBankName,
                     hint: const Text("Choose a wallet provider"),
                     items: banks.map((doc) {

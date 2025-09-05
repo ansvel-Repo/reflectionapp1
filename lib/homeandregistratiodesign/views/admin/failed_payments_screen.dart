@@ -49,11 +49,13 @@ class _FailedPaymentsScreenState extends State<FailedPaymentsScreen> {
       final double amount = (data['amount'] as num).toDouble();
       final String customerId = data['customerId'];
       final String originalReference = data['paymentReference'];
+      final String provider = data['provider'];
 
       await _walletApiService.reverseFailedBillPayment(
         amount: amount,
         customerId: customerId,
         originalReference: originalReference,
+        provider: provider,
       );
 
       // After successful reversal, delete the log from the failed payments table

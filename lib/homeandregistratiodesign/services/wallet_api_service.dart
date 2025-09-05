@@ -1,10 +1,10 @@
 import 'dart:convert';
-// import 'package:ansvel/controllers/auth_controller.dart';
-import 'package:ansvel/homeandregistratiodesign/controllers/auth_controller.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'dart:io';
 import 'package:flutter/foundation.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:http/http.dart' as http;
 import 'package:uuid/uuid.dart';
+import 'package:ansvel/homeandregistratiodesign/controllers/auth_controller.dart';
 
 const Uuid uuid = Uuid();
 
@@ -13,7 +13,7 @@ class WalletApiService {
   // Base URL (switches between local dev and prod automatically)
   static const String _baseUrl = kDebugMode
       ? 'http://localhost:3000'
-      : 'https://api.ansvel.com/api';
+      : 'https://api.ansvel.com';
 
   /// Get Firebase Auth Token
   Future<String> _getAuthToken() async {
@@ -38,7 +38,8 @@ class WalletApiService {
 
   // ------------------- WALLET CREATION -------------------
 
-  Future<Map<String, dynamic>> createInitialWallet({
+  Future<Map<String, dynamic>> createWallet({
+    required String provider,
     required String bvn,
     required String dob,
     required String country,
@@ -46,67 +47,39 @@ class WalletApiService {
     required String lastName,
     required String phoneNumber,
     required String address,
+    String? encryptedPin,
   }) async {
     final token = await _getAuthToken();
-    final uri = Uri.parse('$_baseUrl/wallet/create');
+    final uri = Uri.parse('$_baseUrl/gateway/wallet/create');
 
-    final response = await http
-        .post(
-          uri,
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer $token',
-          },
-          body: jsonEncode({
-            'provider': 'providus',
-            'bvn': bvn,
-            'firstName': firstName,
-            'lastName': lastName,
-            'dateOfBirth': dob,
-            'phoneNumber': phoneNumber,
-            'address': address,
-            'country': country,
-          }),
-        )
-        .timeout(const Duration(seconds: 45));
+    try {
+      final response = await http
+          .post(
+            uri,
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $token',
+            },
+            body: jsonEncode({
+              'provider': provider,
+              'bvn': bvn,
+              'firstName': firstName,
+              'lastName': lastName,
+              'dateOfBirth': dob,
+              'phoneNumber': phoneNumber,
+              'address': address,
+              'country': country,
+              if (encryptedPin != null) 'encryptedTransactionPin': encryptedPin,
+            }),
+          )
+          .timeout(const Duration(seconds: 45));
 
-    return _handleResponse(response);
-  }
-
-  Future<Map<String, dynamic>> createAdditionalWallet({
-    required AuthController authController,
-    required String bankName,
-    required String country,
-    required String encryptedPin,
-  }) async {
-    final token = await _getAuthToken();
-    final user = authController.currentUser;
-    if (user == null) throw Exception('User data not found.');
-
-    final uri = Uri.parse('$_baseUrl/wallet/create');
-
-    final response = await http
-        .post(
-          uri,
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer $token',
-          },
-          body: jsonEncode({
-            'provider': bankName.toLowerCase(),
-            'firstName': user.firstName,
-            'lastName': user.lastName,
-            'dateOfBirth': user.dateOfBirth,
-            'phoneNumber': user.phoneNumber,
-            'email': user.email,
-            'address': user.address,
-            'country': country,
-            'transactionPin': encryptedPin,
-          }),
-        )
-        .timeout(const Duration(seconds: 45));
-
-    return _handleResponse(response);
+      return _handleResponse(response);
+    } on SocketException {
+      throw Exception('Network Error: Please check your internet connection.');
+    } catch (e) {
+      rethrow;
+    }
   }
 
   // ------------------- WALLET TRANSACTIONS -------------------
@@ -115,57 +88,71 @@ class WalletApiService {
     required double amount,
     required String reference,
     required String customerId,
+    required String provider,
   }) async {
     final token = await _getAuthToken();
-    final uri = Uri.parse('$_baseUrl/wallet/debit');
+    final uri = Uri.parse('$_baseUrl/gateway/wallet/debit');
 
-    final response = await http
-        .post(
-          uri,
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer $token',
-          },
-          body: jsonEncode({
-            'provider': 'providus',
-            'amount': amount,
-            'reference': reference,
-            'customerId': customerId,
-          }),
-        )
-        .timeout(const Duration(seconds: 30));
+    try {
+      final response = await http
+          .post(
+            uri,
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $token',
+            },
+            body: jsonEncode({
+              'provider': provider,
+              'amount': amount,
+              'reference': reference,
+              'customerId': customerId,
+            }),
+          )
+          .timeout(const Duration(seconds: 30));
 
-    return _handleResponse(response);
+      return _handleResponse(response);
+    } on SocketException {
+      throw Exception('Network Error: Please check your internet connection.');
+    } catch (e) {
+      rethrow;
+    }
   }
 
   Future<Map<String, dynamic>> reverseFailedBillPayment({
     required double amount,
     required String customerId,
     required String originalReference,
+    required String provider,
   }) async {
     final token = await _getAuthToken();
     final reversalReference =
         'reversal-${originalReference}-${uuid.v4().substring(0, 8)}';
 
-    final uri = Uri.parse('$_baseUrl/wallet/credit');
+    final uri = Uri.parse('$_baseUrl/gateway/wallet/credit');
 
-    final response = await http
-        .post(
-          uri,
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer $token',
-          },
-          body: jsonEncode({
-            'provider': 'providus',
-            'amount': amount,
-            'reference': reversalReference,
-            'customerId': customerId,
-          }),
-        )
-        .timeout(const Duration(seconds: 30));
+    try {
+      final response = await http
+          .post(
+            uri,
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $token',
+            },
+            body: jsonEncode({
+              'provider': provider,
+              'amount': amount,
+              'reference': reversalReference,
+              'customerId': customerId,
+            }),
+          )
+          .timeout(const Duration(seconds: 30));
 
-    return _handleResponse(response);
+      return _handleResponse(response);
+    } on SocketException {
+      throw Exception('Network Error: Please check your internet connection.');
+    } catch (e) {
+      rethrow;
+    }
   }
 
   // ------------------- TRANSFERS -------------------
@@ -173,21 +160,27 @@ class WalletApiService {
   Future<Map<String, dynamic>> verifyBankAccount({
     required String accountNumber,
     required String sortCode,
+    required String provider,
   }) async {
     final token = await _getAuthToken();
-    final uri = Uri.parse('$_baseUrl/transfer/account/details').replace(
+    final uri = Uri.parse('$_baseUrl/gateway/transfer/account/details').replace(
       queryParameters: {
-        'provider': 'providus',
+        'provider': provider,
         'accountNumber': accountNumber,
         'sortCode': sortCode,
       },
     );
 
-    final response = await http
-        .get(uri, headers: {'Authorization': 'Bearer $token'})
-        .timeout(const Duration(seconds: 20));
-
-    return _handleResponse(response);
+    try {
+      final response = await http
+          .get(uri, headers: {'Authorization': 'Bearer $token'})
+          .timeout(const Duration(seconds: 20));
+      return _handleResponse(response);
+    } on SocketException {
+      throw Exception('Network Error: Please check your internet connection.');
+    } catch (e) {
+      rethrow;
+    }
   }
 
   Future<Map<String, dynamic>> transferToBank({
@@ -197,30 +190,37 @@ class WalletApiService {
     required double amount,
     required String narration,
     required String encryptedPin,
+    required String provider,
   }) async {
     final token = await _getAuthToken();
-    final uri = Uri.parse('$_baseUrl/wallet/transfer/bank');
+    final uri = Uri.parse('$_baseUrl/gateway/transfer/bank');
 
-    final response = await http
-        .post(
-          uri,
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer $token',
-          },
-          body: jsonEncode({
-            'provider': 'providus',
-            'accountNumber': accountNumber,
-            'accountName': accountName,
-            'sortCode': sortCode,
-            'amount': amount,
-            'narration': narration,
-            'encryptedTransactionPin': encryptedPin,
-          }),
-        )
-        .timeout(const Duration(seconds: 45));
+    try {
+      final response = await http
+          .post(
+            uri,
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $token',
+            },
+            body: jsonEncode({
+              'provider': provider,
+              'accountNumber': accountNumber,
+              'accountName': accountName,
+              'sortCode': sortCode,
+              'amount': amount,
+              'narration': narration,
+              'encryptedTransactionPin': encryptedPin,
+            }),
+          )
+          .timeout(const Duration(seconds: 45));
 
-    return _handleResponse(response);
+      return _handleResponse(response);
+    } on SocketException {
+      throw Exception('Network Error: Please check your internet connection.');
+    } catch (e) {
+      rethrow;
+    }
   }
 
   Future<Map<String, dynamic>> transferToWallet({
@@ -228,58 +228,79 @@ class WalletApiService {
     required double amount,
     required String narration,
     required String encryptedPin,
+    required String provider,
   }) async {
     final token = await _getAuthToken();
-    final uri = Uri.parse('$_baseUrl/wallet/transfer/internal');
+    final uri = Uri.parse('$_baseUrl/gateway/transfer/internal');
 
-    final response = await http
-        .post(
-          uri,
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer $token',
-          },
-          body: jsonEncode({
-            'provider': 'providus',
-            'recipientUsername': recipientUsername,
-            'amount': amount,
-            'narration': narration,
-            'encryptedTransactionPin': encryptedPin,
-          }),
-        )
-        .timeout(const Duration(seconds: 30));
+    try {
+      final response = await http
+          .post(
+            uri,
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $token',
+            },
+            body: jsonEncode({
+              'provider': provider,
+              'recipientUsername': recipientUsername,
+              'amount': amount,
+              'narration': narration,
+              'encryptedTransactionPin': encryptedPin,
+            }),
+          )
+          .timeout(const Duration(seconds: 30));
 
-    return _handleResponse(response);
+      return _handleResponse(response);
+    } on SocketException {
+      throw Exception('Network Error: Please check your internet connection.');
+    } catch (e) {
+      rethrow;
+    }
   }
 
   // ------------------- BALANCE & STATEMENTS -------------------
 
   Future<Map<String, dynamic>> getWalletBalance({
-    required String accountNumber,
+    required String customerId,
     required String provider,
   }) async {
     final token = await _getAuthToken();
-    final uri = Uri.parse('$_baseUrl/wallet/balance').replace(
-      queryParameters: {'provider': provider, 'accountNumber': accountNumber},
+    final uri = Uri.parse('$_baseUrl/gateway/wallet/balance').replace(
+      queryParameters: {'provider': provider, 'customerId': customerId},
     );
 
-    final response = await http
-        .get(uri, headers: {'Authorization': 'Bearer $token'})
-        .timeout(const Duration(seconds: 20));
+    try {
+      final response = await http
+          .get(uri, headers: {'Authorization': 'Bearer $token'})
+          .timeout(const Duration(seconds: 20));
 
-    return _handleResponse(response);
+      return _handleResponse(response);
+    } on SocketException {
+      throw Exception('Network Error: Please check your internet connection.');
+    } catch (e) {
+      rethrow;
+    }
   }
 
   Future<List<dynamic>> getTransactionHistory() async {
     final token = await _getAuthToken();
-    final uri = Uri.parse('$_baseUrl/wallet/transactions?provider=providus');
+    final uri = Uri.parse(
+      '$_baseUrl/gateway/wallet/transactions?provider=providus',
+    );
 
-    final response = await http
-        .get(uri, headers: {'Authorization': 'Bearer $token'})
-        .timeout(const Duration(seconds: 30));
+    try {
+      final response = await http
+          .get(uri, headers: {'Authorization': 'Bearer $token'})
+          .timeout(const Duration(seconds: 30));
 
-    final data = _handleResponse(response);
-    return data['transactions'] as List<dynamic>;
+      final data = _handleResponse(response);
+      return data['transactions'] as List<dynamic>;
+    } on SocketException {
+      throw Exception('Network Error: Please check your internet connection.');
+    } catch (e) {
+      rethrow;
+    }
   }
 
   Future<List<dynamic>> getAccountStatement({
@@ -296,24 +317,36 @@ class WalletApiService {
       },
     );
 
-    final response = await http
-        .get(uri, headers: {'Authorization': 'Bearer $token'})
-        .timeout(const Duration(seconds: 30));
+    try {
+      final response = await http
+          .get(uri, headers: {'Authorization': 'Bearer $token'})
+          .timeout(const Duration(seconds: 30));
 
-    return _handleResponse(response) as List<dynamic>;
+      return _handleResponse(response) as List<dynamic>;
+    } on SocketException {
+      throw Exception('Network Error: Please check your internet connection.');
+    } catch (e) {
+      rethrow;
+    }
   }
 
   // ------------------- BANKS -------------------
 
   Future<List<dynamic>> getBankList(String countryCode) async {
     final token = await _getAuthToken();
-    final uri = Uri.parse('$_baseUrl/banks/$countryCode');
+    final uri = Uri.parse('$_baseUrl/gateway/banks/$countryCode');
 
-    final response = await http
-        .get(uri, headers: {'Authorization': 'Bearer $token'})
-        .timeout(const Duration(seconds: 20));
+    try {
+      final response = await http
+          .get(uri, headers: {'Authorization': 'Bearer $token'})
+          .timeout(const Duration(seconds: 20));
 
-    return _handleResponse(response) as List<dynamic>;
+      return _handleResponse(response) as List<dynamic>;
+    } on SocketException {
+      throw Exception('Network Error: Please check your internet connection.');
+    } catch (e) {
+      rethrow;
+    }
   }
 
   // ------------------- CHECKOUT -------------------
@@ -325,25 +358,31 @@ class WalletApiService {
     required String encryptedPin,
   }) async {
     final token = await _getAuthToken();
-    final uri = Uri.parse('$_baseUrl/wallet/checkout');
+    final uri = Uri.parse('$_baseUrl/gateway/wallet/checkout');
 
-    final response = await http
-        .post(
-          uri,
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer $token',
-          },
-          body: jsonEncode({
-            'provider': 'providus',
-            'fromWalletId': fromWalletId,
-            'toCustomerId': toCustomerId,
-            'amount': amount,
-            'encryptedTransactionPin': encryptedPin,
-          }),
-        )
-        .timeout(const Duration(seconds: 30));
+    try {
+      final response = await http
+          .post(
+            uri,
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $token',
+            },
+            body: jsonEncode({
+              'provider': 'providus',
+              'fromWalletId': fromWalletId,
+              'toCustomerId': toCustomerId,
+              'amount': amount,
+              'encryptedTransactionPin': encryptedPin,
+            }),
+          )
+          .timeout(const Duration(seconds: 30));
 
-    return _handleResponse(response);
+      return _handleResponse(response);
+    } on SocketException {
+      throw Exception('Network Error: Please check your internet connection.');
+    } catch (e) {
+      rethrow;
+    }
   }
 }
