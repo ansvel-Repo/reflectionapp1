@@ -68,7 +68,7 @@ dependencies:
   connectivity_plus: ^6.1.5
   encrypt: ^5.0.3
   pointycastle: ^3.6.2
-  flutter_paystack_plus: ^2.2.2
+  # flutter_paystack_plus: ^2.2.2
 
 
   ## -- OnBoarding PACKAGES
@@ -125,6 +125,11 @@ dependencies:
   flutter_local_notifications: ^17.1.2
   flutter_gen: ^5.11.0
   provider: ^6.1.2
+  paystack_flutter_sdk: ^0.0.1-alpha.2
+  pdf: ^3.11.3
+  csv: ^6.0.0
+  open_file: ^3.5.10
+  flutter_secure_storage: ^9.2.4
   
   
 

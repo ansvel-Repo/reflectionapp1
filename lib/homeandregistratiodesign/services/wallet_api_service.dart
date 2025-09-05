@@ -2,25 +2,42 @@ import 'dart:convert';
 // import 'package:ansvel/controllers/auth_controller.dart';
 import 'package:ansvel/homeandregistratiodesign/controllers/auth_controller.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:uuid/uuid.dart';
 
 const Uuid uuid = Uuid();
 
+/// Unified Wallet & Payments API Service for Ansvel
 class WalletApiService {
-  // IMPORTANT: Replace with your deployed Central Orchestrator URL
-  final String _baseUrl = 'https://api.ansvel.com/api';
+  // Base URL (switches between local dev and prod automatically)
+  static const String _baseUrl = kDebugMode
+      ? 'http://localhost:3000'
+      : 'https://api.ansvel.com/api';
 
-  // Helper method to get the current user's Firebase ID token
+  /// Get Firebase Auth Token
   Future<String> _getAuthToken() async {
-    final token = await FirebaseAuth.instance.currentUser?.getIdToken();
+    final token = await FirebaseAuth.instance.currentUser?.getIdToken(true);
     if (token == null) {
       throw Exception('User not authenticated. Please log in again.');
     }
     return token;
   }
 
-  // Creates the first wallet during the initial user onboarding
+  /// Handle API responses consistently
+  dynamic _handleResponse(http.Response response) {
+    final responseBody = jsonDecode(response.body);
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return responseBody;
+    } else {
+      final errorMessage =
+          responseBody['message'] ?? 'An unknown error occurred.';
+      throw Exception('API Error: $errorMessage');
+    }
+  }
+
+  // ------------------- WALLET CREATION -------------------
+
   Future<Map<String, dynamic>> createInitialWallet({
     required String bvn,
     required String dob,
@@ -31,32 +48,31 @@ class WalletApiService {
     required String address,
   }) async {
     final token = await _getAuthToken();
-    final response = await http.post(
-      Uri.parse('$_baseUrl/wallet/create'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-      body: jsonEncode({
-        'provider': 'providus',
-        'bvn': bvn,
-        'firstName': firstName,
-        'lastName': lastName,
-        'dateOfBirth': dob,
-        'phoneNumber': phoneNumber,
-        'address': address,
-        'country': country,
-      }),
-    );
+    final uri = Uri.parse('$_baseUrl/wallet/create');
 
-    if (response.statusCode == 201) {
-      return jsonDecode(response.body);
-    } else {
-      throw Exception('Failed to create wallet: ${response.body}');
-    }
+    final response = await http
+        .post(
+          uri,
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $token',
+          },
+          body: jsonEncode({
+            'provider': 'providus',
+            'bvn': bvn,
+            'firstName': firstName,
+            'lastName': lastName,
+            'dateOfBirth': dob,
+            'phoneNumber': phoneNumber,
+            'address': address,
+            'country': country,
+          }),
+        )
+        .timeout(const Duration(seconds: 45));
+
+    return _handleResponse(response);
   }
 
-  // Creates an additional wallet for an existing user
   Future<Map<String, dynamic>> createAdditionalWallet({
     required AuthController authController,
     required String bankName,
@@ -67,101 +83,93 @@ class WalletApiService {
     final user = authController.currentUser;
     if (user == null) throw Exception('User data not found.');
 
-    final response = await http.post(
-      Uri.parse('$_baseUrl/wallet/create'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-      body: jsonEncode({
-        'provider': bankName.toLowerCase(),
-        'firstName': user.firstName,
-        'lastName': user.lastName,
-        'dateOfBirth': user.dateOfBirth,
-        'phoneNumber': user.phoneNumber,
-        'email': user.email,
-        'address': user.address,
-        'country': country,
-        'transactionPin': encryptedPin,
-      }),
-    );
+    final uri = Uri.parse('$_baseUrl/wallet/create');
 
-    if (response.statusCode == 201) {
-      return jsonDecode(response.body);
-    } else {
-      throw Exception('Failed to create wallet: ${response.body}');
-    }
+    final response = await http
+        .post(
+          uri,
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $token',
+          },
+          body: jsonEncode({
+            'provider': bankName.toLowerCase(),
+            'firstName': user.firstName,
+            'lastName': user.lastName,
+            'dateOfBirth': user.dateOfBirth,
+            'phoneNumber': user.phoneNumber,
+            'email': user.email,
+            'address': user.address,
+            'country': country,
+            'transactionPin': encryptedPin,
+          }),
+        )
+        .timeout(const Duration(seconds: 45));
+
+    return _handleResponse(response);
   }
 
-  // Debits a customer's Providus wallet. This is Step 1 of the bill payment process.
+  // ------------------- WALLET TRANSACTIONS -------------------
+
   Future<Map<String, dynamic>> debitWallet({
     required double amount,
     required String reference,
-    required String customerId, // Providus Customer ID from user's wallet data
+    required String customerId,
   }) async {
     final token = await _getAuthToken();
+    final uri = Uri.parse('$_baseUrl/wallet/debit');
 
-    final response = await http.post(
-      Uri.parse('$_baseUrl/wallet/debit'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-      body: jsonEncode({
-        'provider': 'providus',
-        'amount': amount,
-        'reference': reference,
-        'customerId': customerId,
-      }),
-    );
+    final response = await http
+        .post(
+          uri,
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $token',
+          },
+          body: jsonEncode({
+            'provider': 'providus',
+            'amount': amount,
+            'reference': reference,
+            'customerId': customerId,
+          }),
+        )
+        .timeout(const Duration(seconds: 30));
 
-    if (response.statusCode == 200) {
-      return jsonDecode(response.body);
-    } else {
-      throw Exception(
-        'Wallet debit failed: ${jsonDecode(response.body)['message'] ?? response.body}',
-      );
-    }
+    return _handleResponse(response);
   }
 
-  // Reverses a failed bill payment by crediting the user's wallet.
   Future<Map<String, dynamic>> reverseFailedBillPayment({
     required double amount,
-    required String
-    customerId, // The Providus Customer ID of the user to be refunded
+    required String customerId,
     required String originalReference,
   }) async {
     final token = await _getAuthToken();
-
-    // Generate a new, unique reference for the reversal transaction itself.
     final reversalReference =
         'reversal-${originalReference}-${uuid.v4().substring(0, 8)}';
 
-    final response = await http.post(
-      Uri.parse(
-        '$_baseUrl/wallet/credit',
-      ), // Calling the existing credit endpoint
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-      body: jsonEncode({
-        'provider': 'providus',
-        'amount': amount,
-        'reference': reversalReference,
-        'customerId': customerId,
-      }),
-    );
+    final uri = Uri.parse('$_baseUrl/wallet/credit');
 
-    if (response.statusCode == 200) {
-      return jsonDecode(response.body);
-    } else {
-      throw Exception('Failed to process reversal: ${response.body}');
-    }
+    final response = await http
+        .post(
+          uri,
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $token',
+          },
+          body: jsonEncode({
+            'provider': 'providus',
+            'amount': amount,
+            'reference': reversalReference,
+            'customerId': customerId,
+          }),
+        )
+        .timeout(const Duration(seconds: 30));
+
+    return _handleResponse(response);
   }
 
-  // --- THIS METHOD WAS MISSING ---
-  /// Verifies an external bank account number and returns the account name.
+  // ------------------- TRANSFERS -------------------
+
   Future<Map<String, dynamic>> verifyBankAccount({
     required String accountNumber,
     required String sortCode,
@@ -169,30 +177,19 @@ class WalletApiService {
     final token = await _getAuthToken();
     final uri = Uri.parse('$_baseUrl/transfer/account/details').replace(
       queryParameters: {
-        'provider': 'providus', // Or determined by source wallet
+        'provider': 'providus',
         'accountNumber': accountNumber,
         'sortCode': sortCode,
       },
     );
 
-    final response = await http.get(
-      uri,
-      headers: {'Authorization': 'Bearer $token'},
-    );
+    final response = await http
+        .get(uri, headers: {'Authorization': 'Bearer $token'})
+        .timeout(const Duration(seconds: 20));
 
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      if (data['status'] == true) {
-        return data;
-      } else {
-        throw Exception(data['message'] ?? 'Account could not be verified.');
-      }
-    } else {
-      throw Exception('Account verification failed: ${response.body}');
-    }
+    return _handleResponse(response);
   }
 
-  // Transfers funds from the user's wallet to an external bank account
   Future<Map<String, dynamic>> transferToBank({
     required String accountNumber,
     required String accountName,
@@ -202,31 +199,30 @@ class WalletApiService {
     required String encryptedPin,
   }) async {
     final token = await _getAuthToken();
-    final response = await http.post(
-      Uri.parse('$_baseUrl/wallet/transfer/bank'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-      body: jsonEncode({
-        'provider': 'providus',
-        'accountNumber': accountNumber,
-        'accountName': accountName,
-        'sortCode': sortCode,
-        'amount': amount,
-        'narration': narration,
-        'encryptedTransactionPin': encryptedPin,
-      }),
-    );
+    final uri = Uri.parse('$_baseUrl/wallet/transfer/bank');
 
-    if (response.statusCode == 200 || response.statusCode == 201) {
-      return jsonDecode(response.body);
-    } else {
-      throw Exception('Failed to complete transfer: ${response.body}');
-    }
+    final response = await http
+        .post(
+          uri,
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $token',
+          },
+          body: jsonEncode({
+            'provider': 'providus',
+            'accountNumber': accountNumber,
+            'accountName': accountName,
+            'sortCode': sortCode,
+            'amount': amount,
+            'narration': narration,
+            'encryptedTransactionPin': encryptedPin,
+          }),
+        )
+        .timeout(const Duration(seconds: 45));
+
+    return _handleResponse(response);
   }
 
-  // Transfers funds to another Ansvel user's wallet
   Future<Map<String, dynamic>> transferToWallet({
     required String recipientUsername,
     required double amount,
@@ -234,29 +230,30 @@ class WalletApiService {
     required String encryptedPin,
   }) async {
     final token = await _getAuthToken();
-    final response = await http.post(
-      Uri.parse('$_baseUrl/wallet/transfer/internal'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-      body: jsonEncode({
-        'provider': 'providus',
-        'recipientUsername': recipientUsername,
-        'amount': amount,
-        'narration': narration,
-        'encryptedTransactionPin': encryptedPin,
-      }),
-    );
+    final uri = Uri.parse('$_baseUrl/wallet/transfer/internal');
 
-    if (response.statusCode == 200 || response.statusCode == 201) {
-      return jsonDecode(response.body);
-    } else {
-      throw Exception('Failed to complete transfer: ${response.body}');
-    }
+    final response = await http
+        .post(
+          uri,
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $token',
+          },
+          body: jsonEncode({
+            'provider': 'providus',
+            'recipientUsername': recipientUsername,
+            'amount': amount,
+            'narration': narration,
+            'encryptedTransactionPin': encryptedPin,
+          }),
+        )
+        .timeout(const Duration(seconds: 30));
+
+    return _handleResponse(response);
   }
 
-  // Fetches the user's wallet balance for a specific wallet
+  // ------------------- BALANCE & STATEMENTS -------------------
+
   Future<Map<String, dynamic>> getWalletBalance({
     required String accountNumber,
     required String provider,
@@ -266,50 +263,61 @@ class WalletApiService {
       queryParameters: {'provider': provider, 'accountNumber': accountNumber},
     );
 
-    final response = await http.get(
-      uri,
-      headers: {'Authorization': 'Bearer $token'},
-    );
+    final response = await http
+        .get(uri, headers: {'Authorization': 'Bearer $token'})
+        .timeout(const Duration(seconds: 20));
 
-    if (response.statusCode == 200) {
-      return jsonDecode(response.body);
-    } else {
-      throw Exception('Failed to get balance: ${response.body}');
-    }
+    return _handleResponse(response);
   }
 
-  // Fetches the user's transaction history
   Future<List<dynamic>> getTransactionHistory() async {
     final token = await _getAuthToken();
-    final response = await http.get(
-      Uri.parse('$_baseUrl/wallet/transactions?provider=providus'),
-      headers: {'Authorization': 'Bearer $token'},
-    );
+    final uri = Uri.parse('$_baseUrl/wallet/transactions?provider=providus');
 
-    if (response.statusCode == 200) {
-      final decodedBody = jsonDecode(response.body);
-      return decodedBody['transactions'] as List<dynamic>;
-    } else {
-      throw Exception('Failed to fetch transaction history: ${response.body}');
-    }
+    final response = await http
+        .get(uri, headers: {'Authorization': 'Bearer $token'})
+        .timeout(const Duration(seconds: 30));
+
+    final data = _handleResponse(response);
+    return data['transactions'] as List<dynamic>;
   }
 
-  // Fetches the list of banks for a specific country
+  Future<List<dynamic>> getAccountStatement({
+    required String customerId,
+    required DateTime startDate,
+    required DateTime endDate,
+  }) async {
+    final token = await _getAuthToken();
+    final uri = Uri.parse('$_baseUrl/gateway/wallet/statement').replace(
+      queryParameters: {
+        'customerId': customerId,
+        'startDate': startDate.toIso8601String(),
+        'endDate': endDate.toIso8601String(),
+      },
+    );
+
+    final response = await http
+        .get(uri, headers: {'Authorization': 'Bearer $token'})
+        .timeout(const Duration(seconds: 30));
+
+    return _handleResponse(response) as List<dynamic>;
+  }
+
+  // ------------------- BANKS -------------------
+
   Future<List<dynamic>> getBankList(String countryCode) async {
     final token = await _getAuthToken();
-    final response = await http.get(
-      Uri.parse('$_baseUrl/banks/$countryCode'),
-      headers: {'Authorization': 'Bearer $token'},
-    );
+    final uri = Uri.parse('$_baseUrl/banks/$countryCode');
 
-    if (response.statusCode == 200) {
-      return jsonDecode(response.body) as List<dynamic>;
-    } else {
-      throw Exception('Failed to fetch bank list: ${response.body}');
-    }
+    final response = await http
+        .get(uri, headers: {'Authorization': 'Bearer $token'})
+        .timeout(const Duration(seconds: 20));
+
+    return _handleResponse(response) as List<dynamic>;
   }
 
-  // Processes a payment gateway checkout request
+  // ------------------- CHECKOUT -------------------
+
   Future<Map<String, dynamic>> processCheckout({
     required String fromWalletId,
     required String toCustomerId,
@@ -317,25 +325,25 @@ class WalletApiService {
     required String encryptedPin,
   }) async {
     final token = await _getAuthToken();
-    final response = await http.post(
-      Uri.parse('$_baseUrl/wallet/checkout'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-      body: jsonEncode({
-        'provider': 'providus', // Or determined by fromWalletId
-        'fromWalletId': fromWalletId,
-        'toCustomerId': toCustomerId,
-        'amount': amount,
-        'encryptedTransactionPin': encryptedPin,
-      }),
-    );
+    final uri = Uri.parse('$_baseUrl/wallet/checkout');
 
-    if (response.statusCode == 200) {
-      return jsonDecode(response.body);
-    } else {
-      throw Exception('Checkout failed: ${response.body}');
-    }
+    final response = await http
+        .post(
+          uri,
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $token',
+          },
+          body: jsonEncode({
+            'provider': 'providus',
+            'fromWalletId': fromWalletId,
+            'toCustomerId': toCustomerId,
+            'amount': amount,
+            'encryptedTransactionPin': encryptedPin,
+          }),
+        )
+        .timeout(const Duration(seconds: 30));
+
+    return _handleResponse(response);
   }
 }
