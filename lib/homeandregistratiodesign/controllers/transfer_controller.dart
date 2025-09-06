@@ -91,7 +91,11 @@ class TransferController extends ChangeNotifier {
       );
 
       // After successful transfer, trigger the 5 Naira debit without waiting for it
-      _triggerServiceChargeDebit(fromWallet.customerId);
+      if (fromWallet.customerId != null) {
+        _triggerServiceChargeDebit(fromWallet.customerId!);
+      } else {
+        print("Warning: customerId is null, cannot trigger service charge debit.");
+      }
 
       return result;
     } finally {

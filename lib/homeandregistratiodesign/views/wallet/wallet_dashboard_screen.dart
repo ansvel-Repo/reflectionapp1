@@ -3,6 +3,7 @@ import 'package:ansvel/homeandregistratiodesign/services/wallet_api_service.dart
 import 'package:ansvel/homeandregistratiodesign/views/wallet/transaction_history_screen.dart';
 import 'package:ansvel/homeandregistratiodesign/views/wallet/other_bank_transfer/transfer_to_bank_screen.dart';
 import 'package:ansvel/homeandregistratiodesign/views/wallet/transfer_to_wallet_screen.dart';
+import 'package:ansvel/homeandregistratiodesign/views/wallet/wallet_freeze_screen.dart'; // Import the new screen
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
@@ -23,7 +24,7 @@ class _WalletDashboardScreenState extends State<WalletDashboardScreen> {
   void initState() {
     super.initState();
     _balanceFuture = _walletApiService.getWalletBalance(
-      customerId: widget.wallet.customerId,
+      customerId: widget.wallet.customerId!,
       provider: widget.wallet.provider,
     );
   }
@@ -31,7 +32,7 @@ class _WalletDashboardScreenState extends State<WalletDashboardScreen> {
   void _refreshBalance() {
     setState(() {
       _balanceFuture = _walletApiService.getWalletBalance(
-        customerId: widget.wallet.customerId,
+        customerId: widget.wallet.customerId!,
         provider: widget.wallet.provider,
       );
     });
@@ -50,6 +51,18 @@ class _WalletDashboardScreenState extends State<WalletDashboardScreen> {
             icon: const Icon(Icons.refresh),
             onPressed: _refreshBalance,
             tooltip: "Refresh Balance",
+          ),
+          IconButton(
+            icon: const Icon(Icons.lock_open),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => WalletFreezeScreen(wallet: widget.wallet),
+                ),
+              );
+            },
+            tooltip: "Freeze/Unfreeze Wallet",
           ),
         ],
       ),
@@ -123,7 +136,7 @@ class _WalletDashboardScreenState extends State<WalletDashboardScreen> {
                   ),
                   const SizedBox(height: 24),
                   Text(
-                    widget.wallet.accountName,
+                    widget.wallet.accountName ?? '',
                     style: GoogleFonts.poppins(
                       color: Colors.white,
                       fontWeight: FontWeight.w600,

@@ -66,7 +66,7 @@ class WalletController extends ChangeNotifier {
       if (wallet == null) throw Exception("Wallet not found in controller.");
 
       final balanceData = await _apiService.getWalletBalance(
-        customerId: wallet.customerId, // Corrected parameter name
+        customerId: wallet.customerId ?? '', // Ensure non-null value
         provider: wallet.provider,
       );
 
@@ -153,7 +153,10 @@ class WalletController extends ChangeNotifier {
         encryptedPin: encryptedPin,
         provider: fromWallet.provider, // Corrected missing 'provider' argument
       );
-      _triggerServiceChargeDebit(fromWallet.customerId, fromWallet.provider);
+      _triggerServiceChargeDebit(
+        fromWallet.customerId ?? '', 
+        fromWallet.provider ?? '',
+      );
       return result;
     } finally {
       _isProcessingTransfer = false;

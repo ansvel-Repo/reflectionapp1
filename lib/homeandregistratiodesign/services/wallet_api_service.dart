@@ -82,6 +82,72 @@ class WalletApiService {
     }
   }
 
+  // ------------------- WALLET FREEZE/UNFREEZE -------------------
+
+  /// Freezes a user's wallet
+  Future<Map<String, dynamic>> freezeWallet({
+    required String customerId,
+    required String provider,
+    required String encryptedPin,
+  }) async {
+    final token = await _getAuthToken();
+    final uri = Uri.parse('$_baseUrl/gateway/wallet/freeze');
+
+    try {
+      final response = await http
+          .post(
+            uri,
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $token',
+            },
+            body: jsonEncode({
+              'customerId': customerId,
+              'provider': provider,
+              'encryptedPin': encryptedPin,
+            }),
+          )
+          .timeout(const Duration(seconds: 30));
+      return _handleResponse(response);
+    } on SocketException {
+      throw Exception('Network Error: Please check your internet connection.');
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Unfreezes a user's wallet
+  Future<Map<String, dynamic>> unfreezeWallet({
+    required String customerId,
+    required String provider,
+    required String encryptedPin,
+  }) async {
+    final token = await _getAuthToken();
+    final uri = Uri.parse('$_baseUrl/gateway/wallet/unfreeze');
+
+    try {
+      final response = await http
+          .post(
+            uri,
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $token',
+            },
+            body: jsonEncode({
+              'customerId': customerId,
+              'provider': provider,
+              'encryptedPin': encryptedPin,
+            }),
+          )
+          .timeout(const Duration(seconds: 30));
+      return _handleResponse(response);
+    } on SocketException {
+      throw Exception('Network Error: Please check your internet connection.');
+    } catch (e) {
+      rethrow;
+    }
+  }
+
   // ------------------- WALLET TRANSACTIONS -------------------
 
   Future<Map<String, dynamic>> debitWallet({

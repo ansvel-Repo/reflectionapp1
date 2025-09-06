@@ -37,7 +37,7 @@ class _TransferToBankScreenState extends State<TransferToBankScreen> {
         context,
         listen: false,
       );
-      transferController.fetchBankList(widget.sourceWallet.country);
+      transferController.fetchBankList(widget.sourceWallet.country ?? '');
 
       _accountController.addListener(() {
         if (_accountController.text.length == 10) {
