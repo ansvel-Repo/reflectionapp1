@@ -1,4 +1,5 @@
 import 'package:ansvel/homeandregistratiodesign/models/app_user.dart';
+import 'package:ansvel/homeandregistratiodesign/models/wallet.dart';
 
 import 'package:flutter/material.dart';
 
@@ -25,6 +26,22 @@ class AuthController extends ChangeNotifier {
       await fetchFirestoreUser(firebaseUser.uid);
     }
     notifyListeners();
+  }
+
+  Future<void> updateUserWalletStatusLocally({
+    required String walletId,
+    required String status,
+  }) async {
+    if (_currentUser == null) return;
+
+    final updatedWallets = Map<String, dynamic>.from(_currentUser!.wallets);
+    if (updatedWallets.containsKey(walletId)) {
+      final oldWallet = Wallet.fromJson(updatedWallets[walletId]);
+      final newWallet = oldWallet.copyWith(status: status);
+      updatedWallets[walletId] = newWallet.toJson();
+      _currentUser = _currentUser!.copyWith(wallets: updatedWallets);
+      notifyListeners();
+    }
   }
 
   Future<void> fetchFirestoreUser(String uid) async {

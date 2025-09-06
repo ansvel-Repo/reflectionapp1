@@ -36,6 +36,137 @@ class WalletApiService {
     }
   }
 
+  // ------------------- WALLET FREEZE/UNFREEZE -------------------
+  
+  /// Freezes a user's wallet (self-initiated)
+  Future<Map<String, dynamic>> freezeWallet({
+    required String customerId,
+    required String provider,
+    required String encryptedPin,
+  }) async {
+    final token = await _getAuthToken();
+    final uri = Uri.parse('$_baseUrl/gateway/wallet/freeze/self');
+    try {
+      final response = await http
+          .post(
+            uri,
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $token',
+            },
+            body: jsonEncode({
+              'customerId': customerId,
+              'provider': provider,
+              'encryptedPin': encryptedPin,
+            }),
+          )
+          .timeout(const Duration(seconds: 30));
+      return _handleResponse(response);
+    } on SocketException {
+      throw Exception('Network Error: Please check your internet connection.');
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Unfreezes a user's wallet (self-initiated)
+  Future<Map<String, dynamic>> unfreezeWallet({
+    required String customerId,
+    required String provider,
+    required String encryptedPin,
+  }) async {
+    final token = await _getAuthToken();
+    final uri = Uri.parse('$_baseUrl/gateway/wallet/unfreeze/self');
+    try {
+      final response = await http
+          .post(
+            uri,
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $token',
+            },
+            body: jsonEncode({
+              'customerId': customerId,
+              'provider': provider,
+              'encryptedPin': encryptedPin,
+            }),
+          )
+          .timeout(const Duration(seconds: 30));
+      return _handleResponse(response);
+    } on SocketException {
+      throw Exception('Network Error: Please check your internet connection.');
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Freezes a fraudulent wallet (initiated by another user)
+  Future<Map<String, dynamic>> freezeFraudulentWallet({
+    required String customerId,
+    required String provider,
+    required String encryptedPin,
+  }) async {
+    final token = await _getAuthToken();
+    final uri = Uri.parse('$_baseUrl/gateway/wallet/freeze/fraudulent');
+    try {
+      final response = await http
+          .post(
+            uri,
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $token',
+            },
+            body: jsonEncode({
+              'customerId': customerId,
+              'provider': provider,
+              'encryptedPin': encryptedPin,
+            }),
+          )
+          .timeout(const Duration(seconds: 30));
+      return _handleResponse(response);
+    } on SocketException {
+      throw Exception('Network Error: Please check your internet connection.');
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  // Add this method inside the WalletApiService class
+
+  /// Sends an administrative action (approve or decline) for a freeze request.
+  /// This method is only called by Admin/SubAdmin users.
+  Future<Map<String, dynamic>> approveFreeze({
+    required String docId,
+    required String customerId,
+    required String provider,
+    required String action, // 'approve' or 'decline'
+  }) async {
+    final token = await _getAuthToken();
+    final uri = Uri.parse('$_baseUrl/gateway/admin/freeze/review');
+    try {
+      final response = await http
+          .post(
+            uri,
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $token',
+            },
+            body: jsonEncode({
+              'docId': docId,
+              'customerId': customerId,
+              'provider': provider,
+              'action': action,
+            }),
+          )
+          .timeout(const Duration(seconds: 30));
+      return _handleResponse(response);
+    } on SocketException {
+      throw Exception('Network Error: Please check your internet connection.');
+    } catch (e) {
+      rethrow;
+    }
+  }
+
   // ------------------- WALLET CREATION -------------------
 
   Future<Map<String, dynamic>> createWallet({
@@ -85,7 +216,7 @@ class WalletApiService {
   // ------------------- WALLET FREEZE/UNFREEZE -------------------
 
   /// Freezes a user's wallet
-  Future<Map<String, dynamic>> freezeWallet({
+  Future<Map<String, dynamic>> freezeWalletOtherUser({
     required String customerId,
     required String provider,
     required String encryptedPin,
@@ -117,7 +248,7 @@ class WalletApiService {
   }
 
   /// Unfreezes a user's wallet
-  Future<Map<String, dynamic>> unfreezeWallet({
+  Future<Map<String, dynamic>> unfreezeWalletOtherUser({
     required String customerId,
     required String provider,
     required String encryptedPin,
@@ -422,6 +553,7 @@ class WalletApiService {
     required String toCustomerId,
     required double amount,
     required String encryptedPin,
+    required String provider,
   }) async {
     final token = await _getAuthToken();
     final uri = Uri.parse('$_baseUrl/gateway/wallet/checkout');
@@ -435,7 +567,7 @@ class WalletApiService {
               'Authorization': 'Bearer $token',
             },
             body: jsonEncode({
-              'provider': 'providus',
+              'provider': provider,
               'fromWalletId': fromWalletId,
               'toCustomerId': toCustomerId,
               'amount': amount,

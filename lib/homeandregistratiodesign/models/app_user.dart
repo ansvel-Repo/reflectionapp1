@@ -111,4 +111,43 @@ class AppUser {
       'bvn': bvn, // Adding new bvn field for writing to Firestore
     };
   }
+
+  // Add the missing copyWith method
+  AppUser copyWith({
+    String? uid,
+    String? email,
+    String? username,
+    UserRole? role,
+    Set<BusinessType>? businessTypes,
+    List<SecurityQuestionAnswer>? securityQuestions,
+    String? encryptedPin,
+    String? firstName,
+    String? lastName,
+    String? dateOfBirth,
+    String? phoneNumber,
+    String? address,
+    String? bvn,
+    String? pendingPassword,
+    DateTime? passwordResetTimestamp,
+    Map<String, dynamic>? wallets,
+  }) {
+    return AppUser(
+      uid: uid ?? this.uid,
+      email: email ?? this.email,
+      username: username ?? this.username,
+      role: role ?? this.role,
+      businessTypes: businessTypes ?? this.businessTypes,
+      securityQuestions: securityQuestions ?? this.securityQuestions,
+      encryptedPin: encryptedPin ?? this.encryptedPin,
+      firstName: firstName ?? this.firstName,
+      lastName: lastName ?? this.lastName,
+      dateOfBirth: dateOfBirth ?? this.dateOfBirth,
+      phoneNumber: phoneNumber ?? this.phoneNumber,
+      address: address ?? this.address,
+      bvn: bvn ?? this.bvn,
+      pendingPassword: pendingPassword ?? this.pendingPassword,
+      passwordResetTimestamp: passwordResetTimestamp ?? this.passwordResetTimestamp,
+      wallets: wallets ?? this.wallets,
+    );
+  }
 }

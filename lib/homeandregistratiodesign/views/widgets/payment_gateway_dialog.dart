@@ -1,15 +1,13 @@
-// import 'package:ansvel/controllers/wallet_controller.dart';
+// lib/homeandregistratiodesign/views/widgets/payment_gateway_dialog.dart
+
 import 'package:ansvel/homeandregistratiodesign/controllers/wallet_controller.dart';
 import 'package:ansvel/homeandregistratiodesign/models/wallet.dart';
 import 'package:ansvel/homeandregistratiodesign/services/crypto_service.dart';
 import 'package:ansvel/homeandregistratiodesign/services/wallet_api_service.dart';
-// import 'package:ansvel/models/wallet.dart';
-// import 'package:ansvel/services/crypto_service.dart';
-// import 'package:ansvel/services/wallet_api_service.dart';
+import 'package:ansvel/homeandregistratiodesign/views/widgets/pin_entry_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:pinput/pinput.dart';
 import 'package:provider/provider.dart';
-
 
 class PaymentGatewayDialog extends StatefulWidget {
   final double amount;
@@ -28,6 +26,11 @@ class _PaymentGatewayDialogState extends State<PaymentGatewayDialog> {
   Wallet? _selectedWallet;
   bool _isLoading = false;
   final _pinController = TextEditingController();
+
+  void _onConfirmPin(String pin) {
+    Navigator.pop(context); // Close the PIN entry dialog
+    _processPayment(pin);
+  }
 
   void _processPayment(String pin) async {
     if (_selectedWallet == null) return;
@@ -48,9 +51,10 @@ class _PaymentGatewayDialogState extends State<PaymentGatewayDialog> {
         toCustomerId: widget.merchantCustomerId,
         amount: widget.amount,
         encryptedPin: encryptedPin,
+        provider: _selectedWallet!.provider, // FIX: Added the missing provider argument
       );
 
-      if (mounted && result['transactionComplete'] == true) {
+      if (mounted && result['status'] == 'success') {
         Navigator.pop(context, true); // Pop with success
       } else {
         throw Exception(result['message'] ?? 'Payment was not completed.');
@@ -75,6 +79,11 @@ class _PaymentGatewayDialogState extends State<PaymentGatewayDialog> {
     final wallets = Provider.of<WalletController>(
       context,
     ).wallets.values.toList();
+    
+    // Set the default selected wallet if there is only one
+    if (wallets.length == 1 && _selectedWallet == null) {
+      _selectedWallet = wallets.first;
+    }
 
     return AlertDialog(
       title: const Text("Complete Your Payment"),
@@ -109,7 +118,7 @@ class _PaymentGatewayDialogState extends State<PaymentGatewayDialog> {
                 length: 4,
                 controller: _pinController,
                 obscureText: true,
-                onCompleted: _processPayment,
+                onCompleted: _onConfirmPin,
               ),
             ],
           ],
